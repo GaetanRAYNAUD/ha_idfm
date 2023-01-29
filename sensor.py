@@ -44,9 +44,6 @@ class LineSensor(SensorEntity):
         self.minutes = None
         self.last_update = None
         self.start_name = None
-        self._attr_unique_id = DOMAIN + ':' + self.start + ':' + self.line if self.line is not None else 'line' \
-                                                                                                         + ''.join(
-            self.mission) if self.mission is not None else 'mission'
 
     def update(self):
         response = requests.get('https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring',
