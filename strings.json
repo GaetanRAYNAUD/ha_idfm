@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Enter your api_key, start station, a name, and optionally a line id and a list of missions",
+        "data": {
+          "name": "Name",
+          "api_key": "Api Key",
+          "start": "Start station",
+          "mission": "Missions ids (4 letters code, for multiple use a comma separated list)",
+          "line": "Line"
+        }
+      }
+    },
+    "error": {
+      "empty": "No result in city search: please check the city field"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_location%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    }
+  }
+}

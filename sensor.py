@@ -5,56 +5,54 @@ import homeassistant.helpers.config_validation as cv
 import requests
 import voluptuous
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTime
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-DOMAIN = "idfm"
+from .const import DOMAIN, CONF_NAME, CONF_API_KEY, CONF_START, CONF_MISSION, CONF_LINE
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        voluptuous.Required('name'): cv.string,
-        voluptuous.Required('api_key'): cv.string,
-        voluptuous.Required('start'): cv.string,
-        voluptuous.Optional('end'): [cv.string],
-        voluptuous.Optional('line'): cv.string
+        voluptuous.Required(CONF_NAME): cv.string,
+        voluptuous.Required(CONF_API_KEY): cv.string,
+        voluptuous.Required(CONF_START): cv.string,
+        voluptuous.Optional(CONF_MISSION): cv.string,
+        voluptuous.Optional(CONF_LINE): cv.string
     }
 )
 
-log = logging.getLogger('idfm')
+log = logging.getLogger(DOMAIN)
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    end = config['end'] if 'end' in config else None
-    line_ref = config['line'] if 'line' in config else None
-
-    add_entities([LineSensor(config['name'], config['api_key'], config['start'], end, line_ref)])
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback, ) -> None:
+    async_add_entities([LineSensor(entry.data[CONF_NAME], entry.data[CONF_API_KEY], entry.data[CONF_START],
+                                   entry.data.get(CONF_MISSION), entry.data.get(CONF_LINE))], True)
 
 
 class LineSensor(SensorEntity):
     _attr_icon = 'mdi:train'
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
-    def __init__(self, name, api_key, start, end, line):
+    def __init__(self, name, api_key, start, mission, line):
         self._name = name
         self.data = []
         self.api_key = api_key
         self.start = start
-        self.end = end
+        self.mission = mission
         self.line = line
         self.minutes = None
         self.last_update = None
         self.start_name = None
+        self._attr_unique_id = DOMAIN + ':' + self.start + ':' + self.line if self.line is not None else 'line' \
+                                                                                                         + ''.join(
+            self.mission) if self.mission is not None else 'mission'
 
     def update(self):
         response = requests.get('https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring',
                                 params={'MonitoringRef': 'STIF:StopPoint:Q:' + self.start + ':'},
                                 headers={'apiKey': self.api_key})
         lineRef = 'STIF:Line::' + self.line + ':' if self.line is not None else None
-        endRef = None
-
-        if self.end is not None:
-            endRef = []
-            for e in self.end:
-                endRef.append('STIF:StopPoint:Q:' + e + ':')
 
         if response.status_code == 200:
             body = response.json()
@@ -76,40 +74,43 @@ class LineSensor(SensorEntity):
                             lineValue = journey['LineRef']['value']
 
                             if lineRef is None or lineValue == lineRef:
-                                if endRef is None or (
-                                        'DestinationRef' in journey and 'value' in journey['DestinationRef']
-                                        and journey['DestinationRef']['value'] in endRef):
-                                    if 'MonitoredCall' in journey:
-                                        call = journey['MonitoredCall']
+                                if self.mission is None or (
+                                        'JourneyNote' in journey and len(journey['JourneyNote']) > 0
+                                        and 'value' in journey['JourneyNote'][0]):
+                                    miss = (journey['JourneyNote'][0]['value']) if self.mission is not None else None
+                                    if miss is None or (miss in self.mission):
+                                        if 'MonitoredCall' in journey:
+                                            call = journey['MonitoredCall']
 
-                                        if 'DepartureStatus' in call and 'cancelled' != call['DepartureStatus']:
-                                            if 'ExpectedArrivalTime' in call:
-                                                arrival = datetime.datetime \
-                                                    .strptime(call['ExpectedArrivalTime'],
-                                                              '%Y-%m-%dT%H:%M:%S.%fZ').astimezone()
+                                            if 'DepartureStatus' in call and 'cancelled' != call['DepartureStatus']:
+                                                if 'ExpectedArrivalTime' in call:
+                                                    arrival = datetime.datetime \
+                                                        .strptime(call['ExpectedArrivalTime'],
+                                                                  '%Y-%m-%dT%H:%M:%S.%fZ').astimezone()
 
-                                                if arrival > datetime.datetime.now(datetime.timezone.utc):
-                                                    result = {
-                                                        'line': lineValue.replace('STIF:Line::', '')[:-1],
-                                                        'time': arrival
-                                                    }
+                                                    if arrival > datetime.datetime.now(datetime.timezone.utc):
+                                                        result = {
+                                                            'line': lineValue.replace('STIF:Line::', '')[:-1],
+                                                            'time': arrival,
+                                                            'mission': miss
+                                                        }
 
-                                                    if 'ArrivalPlatformName' in call \
-                                                            and 'value' in call['ArrivalPlatformName']:
-                                                        platform = call['ArrivalPlatformName']['value']
-                                                        result['platform'] = platform
+                                                        if 'ArrivalPlatformName' in call \
+                                                                and 'value' in call['ArrivalPlatformName']:
+                                                            platform = call['ArrivalPlatformName']['value']
+                                                            result['platform'] = platform
 
-                                                    if 'DestinationName' in journey \
-                                                            and len(journey['DestinationName']) > 0 \
-                                                            and 'value' in journey['DestinationName'][0]:
-                                                        result['end'] = journey['DestinationName'][0]['value']
+                                                        if 'DestinationName' in journey \
+                                                                and len(journey['DestinationName']) > 0 \
+                                                                and 'value' in journey['DestinationName'][0]:
+                                                            result['end'] = journey['DestinationName'][0]['value']
 
-                                                    if self.start_name is None and 'StopPointName' in call \
-                                                            and len(call['StopPointName']) > 0 \
-                                                            and 'value' in call['StopPointName'][0]:
-                                                        self.start_name = call['StopPointName'][0]['value']
+                                                        if self.start_name is None and 'StopPointName' in call \
+                                                                and len(call['StopPointName']) > 0 \
+                                                                and 'value' in call['StopPointName'][0]:
+                                                            self.start_name = call['StopPointName'][0]['value']
 
-                                                    self.data.append(result)
+                                                        self.data.append(result)
 
             self.data = sorted(self.data, key=lambda d: d['time'])
             self.last_update = datetime.datetime.now()

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Entrez un nom, votre clé d'api, la gare de départ, potentiellement des missions, et une ligne",
+        "data": {
+          "name": "Nom",
+          "api_key": "Api Key",
+          "start": "Gares de départ",
+          "mission": "Codes missions (code à 4 lettres, pour en choisir plusieurs, séparez les avec une virgule)",
+          "line": "Ligne"
+        }
+      }
+    },
+    "error": {
+      "empty": "Aucun résultat"
+    },
+    "abort": {
+      "unknown": "Erreur inattendue"
+    }
+  }
+}
