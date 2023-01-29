@@ -13,7 +13,9 @@
       }
     },
     "error": {
-      "empty": "Aucun résultat"
+      "empty": "Gare de départ non trouvée",
+      "unauthorized": "La clé d'api n'est pas valide",
+      "unknown": "Erreur inattendue"
     },
     "abort": {
       "unknown": "Erreur inattendue"

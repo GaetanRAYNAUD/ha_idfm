@@ -13,7 +13,9 @@
       }
     },
     "error": {
-      "empty": "No result in city search: please check the city field"
+      "empty": "Start station not found",
+      "unauthorized": "The Api key is not valid",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_location%]",

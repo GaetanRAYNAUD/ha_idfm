@@ -2,7 +2,6 @@ import datetime
 import logging
 
 import homeassistant.helpers.config_validation as cv
-import requests
 import voluptuous
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -10,7 +9,7 @@ from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, CONF_NAME, CONF_API_KEY, CONF_START, CONF_MISSION, CONF_LINE
+from .const import DOMAIN, CONF_NAME, CONF_API_KEY, CONF_START, CONF_MISSION, CONF_LINE, call_api, line_to_code
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -46,10 +45,8 @@ class LineSensor(SensorEntity):
         self.start_name = None
 
     def update(self):
-        response = requests.get('https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring',
-                                params={'MonitoringRef': 'STIF:StopPoint:Q:' + self.start + ':'},
-                                headers={'apiKey': self.api_key})
-        lineRef = 'STIF:Line::' + self.line + ':' if self.line is not None else None
+        line_ref = line_to_code(self.line)
+        response = call_api(self.api_key, self.start)
 
         if response.status_code == 200:
             body = response.json()
@@ -68,9 +65,9 @@ class LineSensor(SensorEntity):
                         journey = visit['MonitoredVehicleJourney']
 
                         if 'LineRef' in journey and 'value' in journey['LineRef']:
-                            lineValue = journey['LineRef']['value']
+                            line_value = journey['LineRef']['value']
 
-                            if lineRef is None or lineValue == lineRef:
+                            if line_ref is None or line_value == line_ref:
                                 if self.mission is None or (
                                         'JourneyNote' in journey and len(journey['JourneyNote']) > 0
                                         and 'value' in journey['JourneyNote'][0]):
@@ -88,7 +85,7 @@ class LineSensor(SensorEntity):
 
                                                     if arrival > datetime.datetime.now(datetime.timezone.utc):
                                                         result = {
-                                                            'line': lineValue.replace('STIF:Line::', '')[:-1],
+                                                            'line': line_value.replace('STIF:Line::', '')[:-1],
                                                             'time': arrival,
                                                             'mission': miss
                                                         }
