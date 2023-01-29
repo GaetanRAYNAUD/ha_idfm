@@ -75,14 +75,15 @@ class LineSensor(SensorEntity):
                                         'JourneyNote' in journey and len(journey['JourneyNote']) > 0
                                         and 'value' in journey['JourneyNote'][0]):
                                     miss = (journey['JourneyNote'][0]['value']) if self.mission is not None else None
+
                                     if miss is None or (miss in self.mission):
                                         if 'MonitoredCall' in journey:
                                             call = journey['MonitoredCall']
 
                                             if 'DepartureStatus' in call and 'cancelled' != call['DepartureStatus']:
-                                                if 'ExpectedArrivalTime' in call:
+                                                if 'ExpectedDepartureTime' in call:
                                                     arrival = datetime.datetime \
-                                                        .strptime(call['ExpectedArrivalTime'],
+                                                        .strptime(call['ExpectedDepartureTime'],
                                                                   '%Y-%m-%dT%H:%M:%S.%fZ').astimezone()
 
                                                     if arrival > datetime.datetime.now(datetime.timezone.utc):
