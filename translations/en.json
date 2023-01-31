@@ -18,6 +18,30 @@
       "unknown": "Unexpected error"
     },
     "abort": {
+      "already_configured": "An entity with the same name and start station is already configured",
+      "unknown": "Unexpected error"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Update line id and missions",
+        "data": {
+          "name": "Name",
+          "api_key": "Api Key",
+          "start": "Start station",
+          "mission": "Missions ids (4 letters code, for multiple use a comma separated list)",
+          "line": "Line"
+        }
+      }
+    },
+    "error": {
+      "empty": "Start station not found",
+      "unauthorized": "The Api key is not valid",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "An entity with the same name and start station is already configured",
       "unknown": "Unexpected error"
     }
   }

@@ -25,8 +25,18 @@ log = logging.getLogger(DOMAIN)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback, ) -> None:
+    line = entry.data.get(CONF_LINE)
+
+    if entry.options is not None and entry.options.get(CONF_LINE) is not None:
+        line = entry.options.get(CONF_LINE)
+
+    mission = entry.data.get(CONF_MISSION)
+
+    if entry.options is not None and entry.options.get(CONF_MISSION) is not None:
+        mission = entry.options.get(CONF_MISSION)
+
     async_add_entities([LineSensor(entry.data[CONF_NAME], entry.data[CONF_API_KEY], entry.data[CONF_START],
-                                   entry.data.get(CONF_MISSION), entry.data.get(CONF_LINE))], True)
+                                   mission, line)], True)
 
 
 class LineSensor(SensorEntity):
@@ -43,6 +53,7 @@ class LineSensor(SensorEntity):
         self.minutes = None
         self.last_update = None
         self.start_name = None
+        self._attr_unique_id = self.name + '_' + self.start
 
     def update(self):
         line_ref = line_to_code(self.line)
@@ -81,7 +92,8 @@ class LineSensor(SensorEntity):
                                                 if 'ExpectedDepartureTime' in call:
                                                     arrival = datetime.datetime \
                                                         .strptime(call['ExpectedDepartureTime'],
-                                                                  '%Y-%m-%dT%H:%M:%S.%fZ').astimezone()
+                                                                  '%Y-%m-%dT%H:%M:%S.%fZ').replace(
+                                                        tzinfo=datetime.timezone.utc)
 
                                                     if arrival > datetime.datetime.now(datetime.timezone.utc):
                                                         result = {
@@ -129,6 +141,8 @@ class LineSensor(SensorEntity):
         return {
             'last_update': self.last_update,
             'start_name': self.start_name,
+            'mission': self.mission,
+            'line': self.line,
             'minutes': self.minutes,
             'trains': self.data
         }

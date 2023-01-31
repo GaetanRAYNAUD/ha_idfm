@@ -5,10 +5,11 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, CONF_START, CONF_API_KEY, CONF_NAME, CONF_MISSION, CONF_LINE, call_api
 
-_LOGGER = logging.getLogger(DOMAIN)
+log = logging.getLogger(DOMAIN)
 
 
 def get_schema(user_input: dict[str, Any] | None = None) -> voluptuous.Schema:
@@ -21,6 +22,35 @@ def get_schema(user_input: dict[str, Any] | None = None) -> voluptuous.Schema:
             voluptuous.Optional(CONF_LINE): cv.string
         }
     )
+
+
+class IdfmOptionsFlowHandler(config_entries.OptionsFlow):
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        def_mission = self.config_entry.options.get(CONF_MISSION)
+
+        if def_mission is None and self.config_entry.data.get(CONF_MISSION) is not None:
+            def_mission = ','.join(self.config_entry.data.get(CONF_MISSION))
+
+        def_line = self.config_entry.options.get(CONF_LINE)
+
+        if def_line is None and self.config_entry.data.get(CONF_LINE) is not None:
+            def_line = self.config_entry.data.get(CONF_LINE)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=voluptuous.Schema(
+                {
+                    voluptuous.Optional(CONF_MISSION, default=def_mission): cv.string,
+                    voluptuous.Optional(CONF_LINE, default=def_line): cv.string
+                }
+            ),
+        )
 
 
 class IDFMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -48,6 +78,9 @@ class IDFMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if line is not None:
             line = line.strip()
 
+        await self.async_set_unique_id(name + '_' + start)
+        self._abort_if_unique_id_configured()
+
         response = await self.hass.async_add_executor_job(call_api, api_key, start)
 
         if response.status_code == 401:
@@ -73,6 +106,11 @@ class IDFMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=get_schema(user_input),
             errors=errors or {},
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> IdfmOptionsFlowHandler:
+        return IdfmOptionsFlowHandler(config_entry)
 
     async def async_step_import(self, user_input: dict[str, Any] | None = None):
         return await self.async_step_user(user_input)

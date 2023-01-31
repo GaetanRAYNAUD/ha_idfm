@@ -18,6 +18,30 @@
       "unknown": "Erreur inattendue"
     },
     "abort": {
+      "already_configured": "Il existe déjà une entité avec le même nom et la même gare de départ",
+      "unknown": "Erreur inattendue"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Modifier la ligne et les missions",
+        "data": {
+          "name": "Nom",
+          "api_key": "Api Key",
+          "start": "Gares de départ",
+          "mission": "Codes missions (code à 4 lettres, pour en choisir plusieurs, séparez les avec une virgule)",
+          "line": "Ligne"
+        }
+      }
+    },
+    "error": {
+      "empty": "Gare de départ non trouvée",
+      "unauthorized": "La clé d'api n'est pas valide",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Il existe déjà une entité avec le même nom et la même gare de départ",
       "unknown": "Erreur inattendue"
     }
   }
