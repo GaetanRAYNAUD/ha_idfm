@@ -6,6 +6,7 @@ import voluptuous
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from voluptuous import UNDEFINED
 
 from .const import DOMAIN, CONF_START, CONF_API_KEY, CONF_NAME, CONF_MISSION, CONF_LINE, call_api
 
@@ -46,8 +47,8 @@ class IdfmOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=voluptuous.Schema(
                 {
-                    voluptuous.Optional(CONF_MISSION, default=def_mission): cv.string,
-                    voluptuous.Optional(CONF_LINE, default=def_line): cv.string
+                    voluptuous.Optional(CONF_MISSION, default=def_mission if def_mission else UNDEFINED): cv.string,
+                    voluptuous.Optional(CONF_LINE, default=def_line if def_line else UNDEFINED): cv.string
                 }
             ),
         )
